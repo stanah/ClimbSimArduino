@@ -10,10 +10,10 @@
 #include "trainer_peripheral.h"
 
 #define APPROVAL_DELTA (5)
-#define DISTANCE_OFFSET (100)
-// #define MOTOR_MAX (300)
-// #define MOTOR_MAX (0)
-#define ADC_PORT (34)
+
+#define ADC_PORT A6
+#define MOTOR_CTRL_PORT_A (12)
+#define MOTOR_CTRL_PORT_B (14)
 
 #define CONTROL_LENGTH (13)
 
@@ -41,7 +41,7 @@ void vControlTask(void* pvParameters) {
     xStatus = xQueueReceive(xControlQueue, &buf, portMAX_DELAY);
     if (xStatus == pdPASS) {
       if (buf[4] == 0x33) {
-        nextSlope = (buf[10] * 256 + buf[9]) / 10 - 2000;
+        nextSlope = ((buf[10] * 256 + buf[9]) / 10 - 2000) * 2;
         Serial.print("next slope:");
         Serial.println(nextSlope);
       }
@@ -62,6 +62,36 @@ void setup() {
 
   central.setDataCallback((DataCallback)dataCallback);
   peripheral.setControlCallback((DataCallback)controlCallback);
+
+  pinMode(MOTOR_CTRL_PORT_A, OUTPUT);
+  pinMode(MOTOR_CTRL_PORT_B, OUTPUT);
+
+  pinMode(ADC_PORT, ANALOG);
+
+  // initialize motor to slope 0
+  while (1) {
+    int sum = 0;
+    for (int i = 0; i < 10; i++) {
+      sum += analogRead(ADC_PORT);
+    }
+    nowSlope = (sum / 10) * 0.2 - 270;
+    // Serial.print("now slope:");
+    // Serial.println(nowSlope);
+    int diff = -(nowSlope - 0);
+    if (diff > APPROVAL_DELTA) {
+      digitalWrite(MOTOR_CTRL_PORT_A, HIGH);
+      digitalWrite(MOTOR_CTRL_PORT_B, LOW);
+    } else if (diff < -APPROVAL_DELTA) {
+      digitalWrite(MOTOR_CTRL_PORT_A, LOW);
+      digitalWrite(MOTOR_CTRL_PORT_B, HIGH);
+    } else {
+      digitalWrite(MOTOR_CTRL_PORT_A, LOW);
+      digitalWrite(MOTOR_CTRL_PORT_B, LOW);
+      break;
+    }
+    delay(250);
+  }
+  Serial.println("initialized");
 }
 
 void loop() {
@@ -81,19 +111,26 @@ void loop() {
     central.startScan();
   }
 
-  nowSlope = analogRead(ADC_PORT);
-  Serial.print("now slope:");
-  Serial.println(nowSlope);
+  int sum = 0;
+  for (int i = 0; i < 10; i++) {
+    sum += analogRead(ADC_PORT);
+  }
+  nowSlope = (sum / 10) * 0.2 - 270;
+  // Serial.print("now slope:");
+  // Serial.println(nowSlope);
   int diff = -(nowSlope - nextSlope);
   if (diff > APPROVAL_DELTA) {
-    Serial.println("up");
-    // actuatorDriver.up();
+    // Serial.println("up");
+    digitalWrite(MOTOR_CTRL_PORT_A, HIGH);
+    digitalWrite(MOTOR_CTRL_PORT_B, LOW);
   } else if (diff < -APPROVAL_DELTA) {
-    Serial.println("down");
-    // actuatorDriver.down();
+    // Serial.println("down");
+    digitalWrite(MOTOR_CTRL_PORT_A, LOW);
+    digitalWrite(MOTOR_CTRL_PORT_B, HIGH);
   } else {
-    Serial.println("stop");
-    // actuatorDriver.stop();
+    digitalWrite(MOTOR_CTRL_PORT_A, LOW);
+    digitalWrite(MOTOR_CTRL_PORT_B, LOW);
+    // Serial.println("stop");
   }
-  delay(1000);
+  delay(250);
 }
