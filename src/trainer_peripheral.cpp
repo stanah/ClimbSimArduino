@@ -28,18 +28,21 @@ void TrainerPeripheral::init() {
   BLEService *pService = pServer->createService(TRAINER_SERVICE_UUID);
   pDataCharacteristic =
       pService->createCharacteristic(TRAINER_DATA_CHAR_UUID, BLECharacteristic::PROPERTY_NOTIFY);
-  pControlCharacteristic = pService->createCharacteristic(TRAINER_CONTROL_CHAR_UUID,
-                                                          BLECharacteristic::PROPERTY_WRITE_NR);
+  pControlCharacteristic = pService->createCharacteristic(
+      TRAINER_CONTROL_CHAR_UUID,
+      BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
   pDataCharacteristic->addDescriptor(new BLE2902());
   pControlCharacteristic->setCallbacks(new ControlCallbacks());
   BLEService *pCpService = pServer->createService(CP_SERVICE_UUID);
   BLEService *pCscService = pServer->createService(CSC_SERVICE_UUID);
   BLEService *pDeviceInfoService = pServer->createService(DEVICE_INFO_SERVICE_UUID);
-
+  pDeviceInfoService->start();
+  pCpService->start();
+  pCscService->start();
   pService->start();
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
-  pAdvertising->setMinPreferred(0x12);
+  pAdvertising->setMaxPreferred(0x12);
   pAdvertising->setScanResponse(true);
 
   BLEAdvertisementData advertisementData;
