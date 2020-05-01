@@ -17,6 +17,9 @@
 
 #define CONTROL_LENGTH (13)
 
+#define SLOPE_ALPHA (0.2)
+#define SLOPE_BETA (300)
+
 static TrainerCentral central;
 static TrainerPeripheral peripheral;
 
@@ -74,7 +77,7 @@ void setup() {
     for (int i = 0; i < 10; i++) {
       sum += analogRead(ADC_PORT);
     }
-    nowSlope = (sum / 10) * 0.2 - 270;
+    nowSlope = (sum / 10) * SLOPE_ALPHA - SLOPE_BETA;
     // Serial.print("now slope:");
     // Serial.println(nowSlope);
     int diff = -(nowSlope - 0);
@@ -115,7 +118,7 @@ void loop() {
   for (int i = 0; i < 10; i++) {
     sum += analogRead(ADC_PORT);
   }
-  nowSlope = (sum / 10) * 0.2 - 270;
+  nowSlope = (sum / 10) * SLOPE_ALPHA - SLOPE_BETA;
   // Serial.print("now slope:");
   // Serial.println(nowSlope);
   int diff = -(nowSlope - nextSlope);
