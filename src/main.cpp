@@ -6,20 +6,35 @@
 #include <BLEUtils.h>
 #include <FreeRTOS/queue.h>
 
+// #define SENSOR_TYPE_POTENTIOMETER
+
+#ifndef SENSOR_TYPE_POTENTIOMETER
+#include <VL53L0X.h>
+#include <Wire.h>
+#endif
+
 #include "trainer_central.h"
 #include "trainer_peripheral.h"
 
 #define APPROVAL_DELTA (5)
 
-#define ADC_PORT A6
 #define MOTOR_CTRL_PORT_A (12)
 #define MOTOR_CTRL_PORT_B (14)
 
 #define CONTROL_LENGTH (13)
 
+#define SLOPE_ALPHA (0.1)
+#define SLOPE_BETA (5)
+#define AVG_CNT (10)
+
+#ifdef SENSOR_TYPE_POTENTIOMETER
 #define SLOPE_ALPHA (0.2)
 #define SLOPE_BETA (300)
-
+#else
+#define SLOPE_ALPHA (0.1)
+#define SLOPE_BETA (5)
+VL53L0X sensor;
+#endif
 static TrainerCentral central;
 static TrainerPeripheral peripheral;
 
@@ -66,20 +81,44 @@ void setup() {
   central.setDataCallback((DataCallback)dataCallback);
   peripheral.setControlCallback((DataCallback)controlCallback);
 
+#ifdef SENSOR_TYPE_POTENTIOMETER
+  pinMode(ADC_PORT, ANALOG);
+#else
+  Wire.begin();
+
+  sensor.setTimeout(500);
+  if (!sensor.init()) {
+    Serial.println("Failed to detect and initialize sensor!");
+    while (1) {
+    }
+  }
+  sensor.startContinuous();
+#endif
+
   pinMode(MOTOR_CTRL_PORT_A, OUTPUT);
   pinMode(MOTOR_CTRL_PORT_B, OUTPUT);
-
-  pinMode(ADC_PORT, ANALOG);
 
   // initialize motor to slope 0
   while (1) {
     int sum = 0;
-    for (int i = 0; i < 10; i++) {
+    int cnt = 0;
+    for (int i = 0; i < AVG_CNT; i++) {
+#ifdef SENSOR_TYPE_POTENTIOMETER
       sum += analogRead(ADC_PORT);
+      cnt++;
+#else
+      int milli = sensor.readRangeContinuousMillimeters();
+      if (sensor.timeoutOccurred()) {
+        Serial.print(" TIMEOUT");
+      } else {
+        sum += milli;
+        cnt++;
+      }
+#endif
     }
-    nowSlope = (sum / 10) * SLOPE_ALPHA - SLOPE_BETA;
-    // Serial.print("now slope:");
-    // Serial.println(nowSlope);
+    nowSlope = (sum / cnt) * SLOPE_ALPHA - SLOPE_BETA;
+    Serial.print("now slope:");
+    Serial.println(nowSlope);
     int diff = -(nowSlope - 0);
     if (diff > APPROVAL_DELTA) {
       digitalWrite(MOTOR_CTRL_PORT_A, HIGH);
@@ -115,12 +154,25 @@ void loop() {
   }
 
   int sum = 0;
-  for (int i = 0; i < 10; i++) {
+  int cnt = 0;
+  for (int i = 0; i < AVG_CNT; i++) {
+#ifdef SENSOR_TYPE_POTENTIOMETER
     sum += analogRead(ADC_PORT);
+    cnt++;
+#else
+    int milli = sensor.readRangeContinuousMillimeters();
+    if (sensor.timeoutOccurred()) {
+      Serial.print("TIMEOUT");
+    } else {
+      sum += milli;
+      cnt++;
+    }
+#endif
   }
-  nowSlope = (sum / 10) * SLOPE_ALPHA - SLOPE_BETA;
-  // Serial.print("now slope:");
-  // Serial.println(nowSlope);
+  nowSlope = (sum / cnt) * SLOPE_ALPHA - SLOPE_BETA;
+
+  Serial.print("now slope:");
+  Serial.println(nowSlope);
   int diff = -(nowSlope - nextSlope);
   if (diff > APPROVAL_DELTA) {
     // Serial.println("up");
