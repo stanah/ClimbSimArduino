@@ -25,7 +25,7 @@ URLは参考です。
 * ACアダプタ: 12V3A(https://www.amazon.co.jp/dp/B07P84CQPC)
 
 ## 回路図
-![circuit](https://user-images.githubusercontent.com/6167596/80997248-00e02580-8e7c-11ea-97bc-d1cb8b39366f.png)
+![circuit](https://user-images.githubusercontent.com/6167596/81029511-3575d080-8ec0-11ea-80df-98f50e1db5d1.png)
 
 
 ## 使い方
