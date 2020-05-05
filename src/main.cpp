@@ -18,13 +18,10 @@
 
 #define APPROVAL_DELTA (5)
 
-#define MOTOR_CTRL_PORT_A (12)
-#define MOTOR_CTRL_PORT_B (14)
+#define MOTOR_CTRL_PORT_A (0)
+#define MOTOR_CTRL_PORT_B (2)
 
 #define CONTROL_LENGTH (13)
-
-#define SLOPE_ALPHA (0.1)
-#define SLOPE_BETA (5)
 #define AVG_CNT (10)
 
 #ifdef SENSOR_TYPE_POTENTIOMETER
