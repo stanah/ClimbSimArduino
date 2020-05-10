@@ -5,6 +5,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <FreeRTOS/queue.h>
+#include <heltec.h>
 
 // #define SENSOR_TYPE_POTENTIOMETER
 
@@ -57,9 +58,8 @@ void vControlTask(void* pvParameters) {
     xStatus = xQueueReceive(xControlQueue, &buf, portMAX_DELAY);
     if (xStatus == pdPASS) {
       if (buf[4] == 0x33) {
-        nextSlope = ((buf[10] * 256 + buf[9]) / 10 - 2000) * 2;
-        Serial.print("next slope:");
-        Serial.println(nextSlope);
+        nextSlope = ((buf[10] * 256 + buf[9]) / 10 - 2000) *
+                    2;  // Zwift is passed half the value of the displayed gradient
       }
       central.sendControl(buf, CONTROL_LENGTH);
     }
@@ -68,7 +68,18 @@ void vControlTask(void* pvParameters) {
 
 void setup() {
   BLEDevice::init(LOCAL_NAME);
-  Serial.begin(115200);
+  Heltec.begin(true,   // DisplayEnable
+               false,  // LoRa
+               true    // Serial
+  );
+  Heltec.display->flipScreenVertically();
+  Heltec.display->setFont(ArialMT_Plain_16);
+
+  Heltec.display->clear();
+  Heltec.display->setTextAlignment(TEXT_ALIGN_LEFT);
+  Heltec.display->drawString(0, 0, "Initializing...");
+  Heltec.display->display();
+
   xControlQueue = xQueueCreate(10, CONTROL_LENGTH);
   if (xControlQueue != NULL) {
     xTaskCreate(vControlTask, "Task", 4096, NULL, 1, (TaskHandle_t*)NULL);
@@ -82,7 +93,7 @@ void setup() {
 #ifdef SENSOR_TYPE_POTENTIOMETER
   pinMode(ADC_PORT, ANALOG);
 #else
-  Wire.begin();
+  Wire1.begin(SDA, SCL);
 
   sensor.setTimeout(500);
   if (!sensor.init()) {
@@ -115,8 +126,6 @@ void setup() {
 #endif
     }
     nowSlope = (sum / cnt) * SLOPE_ALPHA - SLOPE_BETA;
-    Serial.print("now slope:");
-    Serial.println(nowSlope);
     int diff = -(nowSlope - 0);
     if (diff > APPROVAL_DELTA) {
       digitalWrite(MOTOR_CTRL_PORT_A, HIGH);
@@ -131,26 +140,33 @@ void setup() {
     }
     delay(250);
   }
-  Serial.println("initialized");
+
+  Heltec.display->setFont(ArialMT_Plain_24);
 }
 
 void loop() {
-  if (peripheral.advertising == false && peripheral.connected == false) {
-    Serial.println("[Peripheral] Start Advertising.");
-    peripheral.startAdvertising();
-  }
-  if (central.doConnect == true) {
-    central.connectToServer();
-    if (central.connected) {
-      Serial.println("[Central] connected to the BLE Server.");
-    } else {
-      Serial.println("[Central] failed to connect to the server.");
+  Heltec.display->clear();
+
+  if (peripheral.connected) {
+    Heltec.display->drawString(0, 0, "app: o");
+  } else {
+    Heltec.display->drawString(0, 0, "app: x");
+    if (!peripheral.advertising) {
+      peripheral.startAdvertising();
     }
   }
 
+  if (central.doConnect == true) {
+    central.connectToServer();
+  }
+
   if (central.connected) {
-  } else if (central.doScan) {
-    central.startScan();
+    Heltec.display->drawString(80, 0, "tr: o");
+  } else {
+    Heltec.display->drawString(80, 0, "tr: x");
+    if (central.doScan) {
+      central.startScan();
+    }
   }
 
   int sum = 0;
@@ -170,22 +186,20 @@ void loop() {
 #endif
   }
   nowSlope = (sum / cnt) * SLOPE_ALPHA - SLOPE_BETA;
-
-  Serial.print("now slope:");
-  Serial.println(nowSlope);
   int diff = -(nowSlope - nextSlope);
+
+  Heltec.display->drawString(0, 32, "slope: " + String(nowSlope / 10) + "%");
+  Heltec.display->display();
+
   if (diff > APPROVAL_DELTA) {
-    // Serial.println("up");
     digitalWrite(MOTOR_CTRL_PORT_A, HIGH);
     digitalWrite(MOTOR_CTRL_PORT_B, LOW);
   } else if (diff < -APPROVAL_DELTA) {
-    // Serial.println("down");
     digitalWrite(MOTOR_CTRL_PORT_A, LOW);
     digitalWrite(MOTOR_CTRL_PORT_B, HIGH);
   } else {
     digitalWrite(MOTOR_CTRL_PORT_A, LOW);
     digitalWrite(MOTOR_CTRL_PORT_B, LOW);
-    // Serial.println("stop");
   }
   delay(250);
 }
