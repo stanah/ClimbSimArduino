@@ -12,6 +12,8 @@ class TrainerPeripheral {
   static DataCallback controlCallback;
 
  public:
+  static boolean advertising;
+  static boolean connected;
   static BLECharacteristic* pDataCharacteristic;
   static BLECharacteristic* pControlCharacteristic;
   void init();

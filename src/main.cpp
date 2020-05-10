@@ -25,6 +25,7 @@
 #define AVG_CNT (10)
 
 #ifdef SENSOR_TYPE_POTENTIOMETER
+#define ADC_PORT A6
 #define SLOPE_ALPHA (0.2)
 #define SLOPE_BETA (300)
 #else
@@ -134,12 +135,14 @@ void setup() {
 }
 
 void loop() {
+  if (peripheral.advertising == false && peripheral.connected == false) {
+    Serial.println("[Peripheral] Start Advertising.");
+    peripheral.startAdvertising();
+  }
   if (central.doConnect == true) {
     central.connectToServer();
     if (central.connected) {
       Serial.println("[Central] connected to the BLE Server.");
-      Serial.println("[Peripheral] Start Advertising.");
-      peripheral.startAdvertising();
     } else {
       Serial.println("[Central] failed to connect to the server.");
     }

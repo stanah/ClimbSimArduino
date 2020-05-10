@@ -1,13 +1,22 @@
 #include "trainer_peripheral.h"
 
 #include <BLE2902.h>
+boolean TrainerPeripheral::connected = false;
+boolean TrainerPeripheral::advertising = false;
 BLECharacteristic *TrainerPeripheral::pDataCharacteristic = nullptr;
 BLECharacteristic *TrainerPeripheral::pControlCharacteristic = nullptr;
 DataCallback TrainerPeripheral::controlCallback = nullptr;
 
 class TrainerPeripheral::MyServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer *pServer) { Serial.println("[Peripheral] Application connected"); };
-  void onDisconnect(BLEServer *pServer) { Serial.println("[Peripheral] Application disconnected"); }
+  void onConnect(BLEServer *pServer) {
+    connected = true;
+    advertising = false;
+    Serial.println("[Peripheral] Application connected");
+  };
+  void onDisconnect(BLEServer *pServer) {
+    connected = false;
+    Serial.println("[Peripheral] Application disconnected");
+  }
 };
 
 class TrainerPeripheral::ControlCallbacks : public BLECharacteristicCallbacks {
@@ -60,7 +69,10 @@ void TrainerPeripheral::init() {
 
 }  // End of setup.
 
-void TrainerPeripheral::startAdvertising() { BLEDevice::startAdvertising(); }
+void TrainerPeripheral::startAdvertising() {
+  advertising = true;
+  BLEDevice::startAdvertising();
+}
 
 void TrainerPeripheral::setControlCallback(DataCallback _controlCallback) {
   controlCallback = _controlCallback;
