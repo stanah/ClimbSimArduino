@@ -1,17 +1,18 @@
 #include "main.h"
 
+#include <Adafruit_SSD1306.h>
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
+#include <Fonts/FreeSans9pt7b.h>
 #include <FreeRTOS/queue.h>
-#include <heltec.h>
+#include <Wire.h>
 
 // #define SENSOR_TYPE_POTENTIOMETER
 
 #ifndef SENSOR_TYPE_POTENTIOMETER
-#include <VL53L0X.h>
-#include <Wire.h>
+#include <Adafruit_VL53L0X.h>
 #endif
 
 #include "trainer_central.h"
@@ -25,15 +26,24 @@
 #define CONTROL_LENGTH (13)
 #define AVG_CNT (10)
 
+#define UP (1)
+#define DOWN (-1)
+#define STOP (0)
+
 #ifdef SENSOR_TYPE_POTENTIOMETER
 #define ADC_PORT A6
 #define SLOPE_ALPHA (0.2)
 #define SLOPE_BETA (300)
 #else
-#define SLOPE_ALPHA (0.1)
-#define SLOPE_BETA (5)
-VL53L0X sensor;
+#define SLOPE_ALPHA (1)
+#define SLOPE_BETA (100)  // Default distance to ToF sensor
+Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 #endif
+
+#define SCREEN_WIDTH 128  // OLED display width, in pixels
+#define SCREEN_HEIGHT 64  // OLED display height, in pixels
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, RST_OLED);
+
 static TrainerCentral central;
 static TrainerPeripheral peripheral;
 
@@ -66,19 +76,57 @@ void vControlTask(void* pvParameters) {
   }
 }
 
+uint8_t toNextSlope() {
+#ifndef SENSOR_TYPE_POTENTIOMETER
+  VL53L0X_RangingMeasurementData_t measure;
+#endif
+  int sum = 0;
+  int cnt = 0;
+  while (cnt < AVG_CNT) {
+#ifdef SENSOR_TYPE_POTENTIOMETER
+    sum += analogRead(ADC_PORT);
+    cnt++;
+#else
+    lox.rangingTest(&measure, false);
+    if (measure.RangeStatus != 4) {
+      sum += measure.RangeMilliMeter;
+      cnt++;
+    }
+#endif
+  }
+  nowSlope = (sum / cnt) * SLOPE_ALPHA - SLOPE_BETA;
+
+  int diff = -(nowSlope - nextSlope);
+  if (diff > APPROVAL_DELTA) {
+    digitalWrite(MOTOR_CTRL_PORT_A, HIGH);
+    digitalWrite(MOTOR_CTRL_PORT_B, LOW);
+    return UP;
+  }
+  if (diff < -APPROVAL_DELTA) {
+    digitalWrite(MOTOR_CTRL_PORT_A, LOW);
+    digitalWrite(MOTOR_CTRL_PORT_B, HIGH);
+    return DOWN;
+  }
+  digitalWrite(MOTOR_CTRL_PORT_A, LOW);
+  digitalWrite(MOTOR_CTRL_PORT_B, LOW);
+  return STOP;
+}
+
 void setup() {
   BLEDevice::init(LOCAL_NAME);
-  Heltec.begin(true,   // DisplayEnable
-               false,  // LoRa
-               true    // Serial
-  );
-  Heltec.display->flipScreenVertically();
-  Heltec.display->setFont(ArialMT_Plain_16);
-
-  Heltec.display->clear();
-  Heltec.display->setTextAlignment(TEXT_ALIGN_LEFT);
-  Heltec.display->drawString(0, 0, "Initializing...");
-  Heltec.display->display();
+  Serial.begin(115200);
+  Wire.begin(SDA_OLED, SCL_OLED);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("SSD1306 allocation failed");
+    while (1)
+      ;
+  }
+  display.setFont(&FreeSans9pt7b);
+  display.setTextColor(WHITE);
+  display.clearDisplay();
+  display.setCursor(0, 25);
+  display.print("Initializing...");
+  display.display();
 
   xControlQueue = xQueueCreate(10, CONTROL_LENGTH);
   if (xControlQueue != NULL) {
@@ -94,63 +142,39 @@ void setup() {
   pinMode(ADC_PORT, ANALOG);
 #else
   Wire1.begin(SDA, SCL);
-
-  sensor.setTimeout(500);
-  if (!sensor.init()) {
-    Serial.println("Failed to detect and initialize sensor!");
-    while (1) {
-    }
+  if (!lox.begin(0x30, false, &Wire1)) {
+    display.clearDisplay();
+    display.setCursor(0, 25);
+    display.print("VL53L0X allocation failed");
+    display.display();
+    while (1)
+      ;
   }
-  sensor.startContinuous();
 #endif
 
   pinMode(MOTOR_CTRL_PORT_A, OUTPUT);
   pinMode(MOTOR_CTRL_PORT_B, OUTPUT);
 
   // initialize motor to slope 0
-  while (1) {
-    int sum = 0;
-    int cnt = 0;
-    for (int i = 0; i < AVG_CNT; i++) {
-#ifdef SENSOR_TYPE_POTENTIOMETER
-      sum += analogRead(ADC_PORT);
-      cnt++;
-#else
-      int milli = sensor.readRangeContinuousMillimeters();
-      if (sensor.timeoutOccurred()) {
-        Serial.print(" TIMEOUT");
-      } else {
-        sum += milli;
-        cnt++;
-      }
-#endif
-    }
-    nowSlope = (sum / cnt) * SLOPE_ALPHA - SLOPE_BETA;
-    int diff = -(nowSlope - 0);
-    if (diff > APPROVAL_DELTA) {
-      digitalWrite(MOTOR_CTRL_PORT_A, HIGH);
-      digitalWrite(MOTOR_CTRL_PORT_B, LOW);
-    } else if (diff < -APPROVAL_DELTA) {
-      digitalWrite(MOTOR_CTRL_PORT_A, LOW);
-      digitalWrite(MOTOR_CTRL_PORT_B, HIGH);
-    } else {
-      digitalWrite(MOTOR_CTRL_PORT_A, LOW);
-      digitalWrite(MOTOR_CTRL_PORT_B, LOW);
-      break;
-    }
+  while (toNextSlope() != STOP) {
+    display.clearDisplay();
+    display.setCursor(0, 25);
+    display.print("Initializing...");
+    display.setCursor(0, 50);
+    display.print("Slope: " + String(nowSlope / 10) + " %");
+    display.display();
     delay(250);
   }
-
-  Heltec.display->setFont(ArialMT_Plain_24);
 }
 
 void loop() {
-  Heltec.display->clear();
+  display.clearDisplay();
 
+  display.setCursor(0, 25);
   if (peripheral.connected) {
-    Heltec.display->drawString(0, 0, "app: o");
+    display.print("App: o");
   } else {
-    Heltec.display->drawString(0, 0, "app: x");
+    display.print("App: x");
     if (!peripheral.advertising) {
       peripheral.startAdvertising();
     }
@@ -160,46 +184,20 @@ void loop() {
     central.connectToServer();
   }
 
+  display.setCursor(64, 25);
   if (central.connected) {
-    Heltec.display->drawString(80, 0, "tr: o");
+    display.print("Tr: o");
   } else {
-    Heltec.display->drawString(80, 0, "tr: x");
+    display.print("Tr: x");
     if (central.doScan) {
       central.startScan();
     }
   }
+  display.setCursor(0, 50);
+  display.print("Slope: " + String(nowSlope / 10) + " %");
+  display.display();
 
-  int sum = 0;
-  int cnt = 0;
-  for (int i = 0; i < AVG_CNT; i++) {
-#ifdef SENSOR_TYPE_POTENTIOMETER
-    sum += analogRead(ADC_PORT);
-    cnt++;
-#else
-    int milli = sensor.readRangeContinuousMillimeters();
-    if (sensor.timeoutOccurred()) {
-      Serial.print("TIMEOUT");
-    } else {
-      sum += milli;
-      cnt++;
-    }
-#endif
-  }
-  nowSlope = (sum / cnt) * SLOPE_ALPHA - SLOPE_BETA;
-  int diff = -(nowSlope - nextSlope);
+  toNextSlope();
 
-  Heltec.display->drawString(0, 32, "slope: " + String(nowSlope / 10) + "%");
-  Heltec.display->display();
-
-  if (diff > APPROVAL_DELTA) {
-    digitalWrite(MOTOR_CTRL_PORT_A, HIGH);
-    digitalWrite(MOTOR_CTRL_PORT_B, LOW);
-  } else if (diff < -APPROVAL_DELTA) {
-    digitalWrite(MOTOR_CTRL_PORT_A, LOW);
-    digitalWrite(MOTOR_CTRL_PORT_B, HIGH);
-  } else {
-    digitalWrite(MOTOR_CTRL_PORT_A, LOW);
-    digitalWrite(MOTOR_CTRL_PORT_B, LOW);
-  }
   delay(250);
 }
