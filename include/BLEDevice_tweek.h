@@ -69,6 +69,8 @@ class BLEDevice {
   static void deinit(bool release_memory = false);
   static uint16_t m_localMTU;
   static esp_ble_sec_act_t m_securityLevel;
+  static void setClientDevice(BLEAddress addr);
+  static void unsetClientDevice(BLEAddress addr);
 
  private:
   static BLEServer* m_pServer;
@@ -86,6 +88,8 @@ class BLEDevice {
                                      esp_ble_gatts_cb_param_t* param);
 
   static void gapEventHandler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
+  static std::vector<std::string> clientAddress;
+  static bool isClientDevice(BLEAddress addr);
 
  public:
   /* custom gap and gatt handlers for flexibility */

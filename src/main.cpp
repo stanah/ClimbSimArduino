@@ -2,7 +2,7 @@
 
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
-#include <BLEDevice.h>
+#include <BLEDevice_tweek.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <Fonts/FreeSans9pt7b.h>

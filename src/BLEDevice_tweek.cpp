@@ -25,7 +25,7 @@
 #include <sstream>  // Part of C++ Standard library
 
 #include "BLEClient.h"
-#include "BLEDevice.h"
+#include "BLEDevice_tweek.h"
 #include "BLEUtils.h"
 #include "GeneralUtils.h"
 
@@ -51,6 +51,7 @@ std::map<uint16_t, conn_status_t> BLEDevice::m_connectedClientsMap;
 gap_event_handler BLEDevice::m_customGapHandler = nullptr;
 gattc_event_handler BLEDevice::m_customGattcHandler = nullptr;
 gatts_event_handler BLEDevice::m_customGattsHandler = nullptr;
+std::vector<std::string> BLEDevice::clientAddress;
 
 /**
  * @brief Create a new instance of a client.
@@ -97,9 +98,9 @@ gatts_event_handler BLEDevice::m_customGattsHandler = nullptr;
         BLEUtils::gattServerEventTypeToString(event).c_str());
 
   BLEUtils::dumpGattServerEvent(event, gatts_if, param);
-
   switch (event) {
     case ESP_GATTS_CONNECT_EVT: {
+      if (BLEDevice::isClientDevice(param->connect.remote_bda)) return;
 #ifdef CONFIG_BLE_SMP_ENABLE  // Check that BLE SMP (security) is configured in make menuconfig
       if (BLEDevice::m_securityLevel) {
         esp_ble_set_encryption(param->connect.remote_bda, BLEDevice::m_securityLevel);
@@ -107,7 +108,10 @@ gatts_event_handler BLEDevice::m_customGattsHandler = nullptr;
 #endif  // CONFIG_BLE_SMP_ENABLE
       break;
     }  // ESP_GATTS_CONNECT_EVT
-
+    case ESP_GATTS_DISCONNECT_EVT: {
+      if (BLEDevice::isClientDevice(param->disconnect.remote_bda)) return;
+      break;
+    }  // ESP_GATTS_DISCONNECT_EVT
     default: {
       break;
     }
@@ -141,6 +145,7 @@ gatts_event_handler BLEDevice::m_customGattsHandler = nullptr;
 
   switch (event) {
     case ESP_GATTC_CONNECT_EVT: {
+      if (!BLEDevice::isClientDevice(param->connect.remote_bda)) return;
 #ifdef CONFIG_BLE_SMP_ENABLE  // Check that BLE SMP (security) is configured in make menuconfig
       if (BLEDevice::m_securityLevel) {
         esp_ble_set_encryption(param->connect.remote_bda, BLEDevice::m_securityLevel);
@@ -148,7 +153,10 @@ gatts_event_handler BLEDevice::m_customGattsHandler = nullptr;
 #endif  // CONFIG_BLE_SMP_ENABLE
       break;
     }  // ESP_GATTS_CONNECT_EVT
-
+    case ESP_GATTC_DISCONNECT_EVT: {
+      if (!BLEDevice::isClientDevice(param->disconnect.remote_bda)) return;
+      break;
+    }
     default:
       break;
   }  // switch
@@ -225,7 +233,8 @@ gatts_event_handler BLEDevice::m_customGattsHandler = nullptr;
        *
        */
     case ESP_GAP_BLE_PASSKEY_NOTIF_EVT:  // the app will receive this evt when the IO  has Output
-                                         // capability and the peer device IO has Input capability.
+                                         // capability and the peer device IO has Input
+                                         // capability.
       // display the passkey number to the user to input it in the peer deivce within 30 seconds
       log_i("ESP_GAP_BLE_PASSKEY_NOTIF_EVT");
 #ifdef CONFIG_BLE_SMP_ENABLE  // Check that BLE SMP (security) is configured in make menuconfig
@@ -506,8 +515,8 @@ void BLEDevice::whiteListRemove(BLEAddress address) {
 void BLEDevice::setEncryptionLevel(esp_ble_sec_act_t level) { BLEDevice::m_securityLevel = level; }
 
 /*
- * @brief Set callbacks that will be used to handle encryption negotiation events and authentication
- * events
+ * @brief Set callbacks that will be used to handle encryption negotiation events and
+ * authentication events
  * @param [in] cllbacks Pointer to BLESecurityCallbacks class callback
  */
 void BLEDevice::setSecurityCallbacks(BLESecurityCallbacks* callbacks) {
@@ -607,8 +616,8 @@ void BLEDevice::removePeerDevice(uint16_t conn_id, bool _client) {
 #ifdef ARDUINO_ARCH_ESP32
   if (release_memory) {
     esp_bt_controller_mem_release(
-        ESP_BT_MODE_BTDM);  // <-- require tests because we released classic BT memory and this can
-                            // cause crash (most likely not, esp-idf takes care of it)
+        ESP_BT_MODE_BTDM);  // <-- require tests because we released classic BT memory and this
+                            // can cause crash (most likely not, esp-idf takes care of it)
   } else {
     initialized = false;
   }
@@ -623,6 +632,20 @@ void BLEDevice::setCustomGattcHandler(gattc_event_handler handler) {
 
 void BLEDevice::setCustomGattsHandler(gatts_event_handler handler) {
   m_customGattsHandler = handler;
+}
+
+void BLEDevice::setClientDevice(BLEAddress addr) { clientAddress.push_back(addr.toString()); }
+void BLEDevice::unsetClientDevice(BLEAddress addr) {
+  // TODO
+  return;
+}
+bool BLEDevice::isClientDevice(BLEAddress addr) {
+  for (int i = 0; i < clientAddress.size(); i++) {
+    if (addr.toString() == clientAddress.at(i)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 #endif  // CONFIG_BT_ENABLED

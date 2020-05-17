@@ -16,7 +16,7 @@ class TrainerCentral::MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCa
       BLEDevice::getScan()->stop();
       myDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnect = true;
-      doScan = true;
+      doScan = false;
     }
   }
 };
@@ -26,6 +26,8 @@ class TrainerCentral::TrainerConnectionCallback : public BLEClientCallbacks {
 
   void onDisconnect(BLEClient *pclient) {
     connected = false;
+    doScan = true;
+    BLEDevice::unsetClientDevice(pclient->getPeerAddress());
     Serial.println("[Central] Trainer disconnected");
   }
 };
@@ -43,12 +45,9 @@ bool TrainerCentral::connectToServer() {
   Serial.println(myDevice->getAddress().toString().c_str());
 
   BLEClient *pClient = BLEDevice::createClient();
-  Serial.println(" - Created client");
-
+  BLEDevice::setClientDevice(myDevice->getAddress());
   pClient->setClientCallbacks(new TrainerConnectionCallback());
   pClient->connect(myDevice);
-  Serial.println(" - Connected to server");
-
   // Obtain a reference to the service we are after in the remote BLE server.
   BLERemoteService *pRemoteService = pClient->getService(TRAINER_SERVICE_UUID);
   if (pRemoteService == nullptr) {
@@ -57,7 +56,6 @@ bool TrainerCentral::connectToServer() {
     pClient->disconnect();
     return false;
   }
-  Serial.println(" - Found our service");
 
   // Obtain a reference to the characteristic in the service of the remote BLE server.
   pDataRemoteCharacteristic = pRemoteService->getCharacteristic(TRAINER_DATA_CHAR_UUID);
@@ -74,26 +72,25 @@ bool TrainerCentral::connectToServer() {
     pClient->disconnect();
     return false;
   }
-  Serial.println(" - Found our characteristic");
-
   if (pDataRemoteCharacteristic->canNotify())
     pDataRemoteCharacteristic->registerForNotify(trainerDataCallback);
   connected = true;
   doConnect = false;
+  Serial.println("[Central] Services/Characteristics discovered");
   return true;
 }
 
 void TrainerCentral::init() {
   BLEScan *pBLEScan = BLEDevice::getScan();
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks(), true);
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
-  pBLEScan->start(5, false);
+  doScan = true;
 }  // End of setup.
 
 void TrainerCentral::startScan() {
-  BLEDevice::getScan()->start(0);
+  BLEDevice::getScan()->start(5);
   return;
 }
 

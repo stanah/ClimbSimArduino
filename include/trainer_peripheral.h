@@ -1,7 +1,7 @@
 #ifndef TRAINER_PERIPHERAL_H_
 #define TRAINER_PERIPHERAL_H_
 #include <Arduino.h>
-#include <BLEDevice.h>
+#include <BLEDevice_tweek.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <main.h>
