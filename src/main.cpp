@@ -9,7 +9,7 @@
 #include <FreeRTOS/queue.h>
 #include <Wire.h>
 
-// #define SENSOR_TYPE_POTENTIOMETER
+#define SENSOR_TYPE_POTENTIOMETER
 
 #ifndef SENSOR_TYPE_POTENTIOMETER
 #include <Adafruit_VL53L0X.h>
@@ -76,6 +76,33 @@ void vControlTask(void* pvParameters) {
   }
 }
 
+void vCentralTask(void* pvParameters) {
+  central.init();
+  central.setDataCallback((DataCallback)dataCallback);
+  while (1) {
+    if (!central.connected) {
+      if (central.doScan) {
+        central.startScan();
+      }
+      if (central.doConnect == true) {
+        central.connectToServer();
+      }
+    }
+    vTaskDelay(2000);
+  }
+}
+void vPeripheralTask(void* pvParameters) {
+  peripheral.init();
+  peripheral.setControlCallback((DataCallback)controlCallback);
+  while (1) {
+    if (!peripheral.connected && !peripheral.advertising) {
+      Serial.println("startAdvertising");
+      peripheral.startAdvertising();
+    }
+    vTaskDelay(2000);
+  }
+}
+
 uint8_t toNextSlope() {
 #ifndef SENSOR_TYPE_POTENTIOMETER
   VL53L0X_RangingMeasurementData_t measure;
@@ -132,11 +159,8 @@ void setup() {
   if (xControlQueue != NULL) {
     xTaskCreate(vControlTask, "Task", 4096, NULL, 1, (TaskHandle_t*)NULL);
   }
-  central.init();
-  peripheral.init();
-
-  central.setDataCallback((DataCallback)dataCallback);
-  peripheral.setControlCallback((DataCallback)controlCallback);
+  xTaskCreate(vCentralTask, "BLECentral", 4096, NULL, 1, (TaskHandle_t*)NULL);
+  xTaskCreate(vPeripheralTask, "BLECentral", 4096, NULL, 1, (TaskHandle_t*)NULL);
 
 #ifdef SENSOR_TYPE_POTENTIOMETER
   pinMode(ADC_PORT, ANALOG);
@@ -175,13 +199,6 @@ void loop() {
     display.print("App: o");
   } else {
     display.print("App: x");
-    if (!peripheral.advertising) {
-      peripheral.startAdvertising();
-    }
-  }
-
-  if (central.doConnect == true) {
-    central.connectToServer();
   }
 
   display.setCursor(64, 25);
@@ -189,12 +206,9 @@ void loop() {
     display.print("Tr: o");
   } else {
     display.print("Tr: x");
-    if (central.doScan) {
-      central.startScan();
-    }
   }
   display.setCursor(0, 50);
-  display.print("Slope: " + String(nowSlope / 10) + " %");
+  display.print(String(nowSlope / 10) + " % -> " + String(nextSlope / 10) + "%");
   display.display();
 
   toNextSlope();
