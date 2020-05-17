@@ -7,7 +7,7 @@ https://www.instructables.com/id/Open-Bicycle-Grade-Simulator-OpenGradeSIM/
 ```
 Zwift on PC -> Zwift Companion -> 本機 -> TacxNeo
 ```
-本機とZwift Companion及びTacxNeoとの接続はBLE経由です。
+本機とZwift Companion及びTacxNeoとの接続はBLE経由です。  
 現在PC上のZwiftからBLEでスマートトレーナーに接続することができないため、スマートフォンのZwift Companionアプリを経由する必要があります。
 
 ## 必要なもの
@@ -38,12 +38,11 @@ URLは参考です。
 2. Zwift Companionアプリを起動する
 3. PCアプリの接続画面で右上の設定から、「Zwiftコンパニオンアプリを使う」を選択する
 4. 本機を起動する
-5. スマートトレーナーに「Tacx Neo dummy ###」を選択する
-※ このとき、パワーやケイデンスセンサーに本機(Tacx Neo dummy)を選択しないでください。
-※ TacxNeoが起動している場合自動的に接続します。(Tacx系の他のトレーナーも接続できるかもしれません。それ以外はおそらく接続できません
+5. スマートトレーナーに「Tacx Neo dummy ###」を選択する ※ このとき、パワーやケイデンスセンサーに本機(Tacx Neo dummy)を選択しないでください
+6. TacxNeoが起動している場合自動的に接続します(Tacx系の他のトレーナーも接続できるかもしれません。それ以外はおそらく接続できません
 
-※ TacxのTrainingアプリからも接続することもできますが、アプリで設定した斜度の倍の値が設定されます。Zwiftが実際の傾斜値の半分の値を送信しているようだったので倍にしてます。
-※ERGモードには対応していません。使いたい場合は直接トレーナーと接続するようにしてください。
+※ ERGモードには対応していません。使いたい場合は直接トレーナーと接続するようにしてください  
+※ Zwift以外にTacxのTrainingアプリからも接続することもできますが、アプリで設定した斜度の倍の値が設定されます。Zwiftが実際の傾斜値の半分の値を送信しているようだったので倍にしてます  
 
 
 <img src="https://user-images.githubusercontent.com/6167596/82143403-b77dd600-987e-11ea-92ec-0106ba2948fa.JPG" width="300px">
