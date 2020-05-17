@@ -70,6 +70,8 @@ void vControlTask(void* pvParameters) {
       if (buf[4] == 0x33) {
         nextSlope = ((buf[10] * 256 + buf[9]) / 10 - 2000) *
                     2;  // Zwift is passed half the value of the displayed gradient
+        // Serial.print("[debug] receive slope:");
+        // Serial.println(nextSlope);
       }
       central.sendControl(buf, CONTROL_LENGTH);
     }
@@ -96,8 +98,11 @@ void vPeripheralTask(void* pvParameters) {
   peripheral.setControlCallback((DataCallback)controlCallback);
   while (1) {
     if (!peripheral.connected && !peripheral.advertising) {
-      Serial.println("startAdvertising");
+      Serial.println("[Peripheral] startAdvertising");
       peripheral.startAdvertising();
+    }
+    if (peripheral.connected) {
+      peripheral.sendUpdateNotify();
     }
     vTaskDelay(2000);
   }
@@ -185,7 +190,7 @@ void setup() {
     display.setCursor(0, 25);
     display.print("Initializing...");
     display.setCursor(0, 50);
-    display.print("Slope: " + String(nowSlope / 10) + " %");
+    display.print(String(nowSlope / 10) + " % -> " + String(nextSlope / 10) + "%");
     display.display();
     delay(250);
   }

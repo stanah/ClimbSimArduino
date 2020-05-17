@@ -20,5 +20,6 @@ class TrainerPeripheral {
   void startAdvertising();
   void setControlCallback(DataCallback _controlCallback);
   void sendData(uint8_t* data, size_t length);
+  void sendUpdateNotify();
 };
 #endif  // TRAINER_PERIPHERAL_H_

@@ -83,3 +83,40 @@ void TrainerPeripheral::sendData(uint8_t *data, size_t length) {
     pDataCharacteristic->notify(true);
   }
 }
+#define COMM_LEN (13)
+
+// equipmentTypeString, equipmentType, elapsedTimeSeconds, speedKmH, distanceTraveledMeters,
+// heartRateBPM, virtualSpeed;
+uint8_t INIT_DATA_10[COMM_LEN] = {0xA4, 0x09, 0x4E, 0x05, 0x10, 0x19, 0x00,
+                                  0x00, 0x00, 0x00, 0xFF, 0x24, 0x34};
+// // hwRevision, manufacturerID, modelNumber;
+// uint8_t INIT_DATA_50[COMM_LEN] = {0xA4, 0x09, 0x4E, 0x05, 0x50, 0xFF, 0xFF,
+//                                   0x01, 0x59, 0x00, 0xF0, 0x0A, 0x14};
+// // serialNumber, swRevisionMain, swRevisionSupplemental;
+// uint8_t INIT_DATA_51[COMM_LEN] = {0xA4, 0x09, 0x4E, 0x05, 0x51, 0xFF, 0x00,
+//                                   0x07, 0xBF, 0x2E, 0x0,  0x00, 0xDE};
+// // ??
+// uint8_t INIT_DATA_FA[COMM_LEN] = {0xA4, 0x09, 0x4E, 0x05, 0xFA, 0x00, 0x02,
+//                                   0x01, 0x00, 0x00, 0xFF, 0x00, 0xE0};
+// // ??
+// uint8_t INIT_DATA_FB[COMM_LEN] = {0xA4, 0x09, 0x4E, 0x05, 0xFB, 0x00, 0x07,
+//                                   0x04, 0x00, 0x08, 0x04, 0x00, 0x12};
+// // ??
+// uint8_t INIT_DATA_F0[COMM_LEN] = {0xA4, 0x09, 0x4E, 0x05, 0xF0, 0x00, 0x00,
+//                                   0x00, 0x00, 0x00, 0x00, 0x00, 0x16};
+void TrainerPeripheral::sendUpdateNotify() {
+  if (pDataCharacteristic != nullptr) {
+    pDataCharacteristic->setValue(INIT_DATA_10, COMM_LEN);
+    pDataCharacteristic->notify(true);
+    // pDataCharacteristic->setValue(INIT_DATA_50, COMM_LEN);
+    // pDataCharacteristic->notify(true);
+    // pDataCharacteristic->setValue(INIT_DATA_51, COMM_LEN);
+    // pDataCharacteristic->notify(true);
+    // pDataCharacteristic->setValue(INIT_DATA_FA, COMM_LEN);
+    // pDataCharacteristic->notify(true);
+    // pDataCharacteristic->setValue(INIT_DATA_FB, COMM_LEN);
+    // pDataCharacteristic->notify(true);
+    // pDataCharacteristic->setValue(INIT_DATA_F0, COMM_LEN);
+    // pDataCharacteristic->notify(true);
+  }
+}
