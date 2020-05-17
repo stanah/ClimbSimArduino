@@ -2,14 +2,14 @@
 
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
-#include <BLEDevice_tweek.h>
+#include <BLEDevice_fix.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <Fonts/FreeSans9pt7b.h>
 #include <FreeRTOS/queue.h>
 #include <Wire.h>
 
-#define SENSOR_TYPE_POTENTIOMETER
+// #define SENSOR_TYPE_POTENTIOMETER
 
 #ifndef SENSOR_TYPE_POTENTIOMETER
 #include <Adafruit_VL53L0X.h>

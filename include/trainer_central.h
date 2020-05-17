@@ -2,7 +2,7 @@
 #define TRAINER_CENTRAL_H_
 
 #include <Arduino.h>
-#include <BLEDevice_tweek.h>
+#include <BLEDevice_fix.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <main.h>
