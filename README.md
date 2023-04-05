@@ -35,9 +35,15 @@ URL は参考です。
 - VSCode をインストールする
 - VSCode の拡張機能から PlatformIO をインストールする
 - PIO Home の Libraries から「Adafruit_SSD1306」, 「Adafruit_VL53L0X」を検索してインストールする
+- 必要に応じてコードを変更する
 - Build -> Upload -> Serial Monitor
 
-デフォルトではセンサから 10cm を斜度 0 としています。変更する場合は main.c の`#define SLOPE_BETA (100)`を編集してください(mm 単位)
+### コードに変更が必要な箇所
+
+- VL53L0X を使用する場合、`#define SENSOR_TYPE_POTENTIOMETER`をコメントアウトしてください
+- VL53L0X を使用する場合、デフォルトではセンサから 10cm を斜度 0 としています。変更する場合は main.c の`#define SLOPE_BETA (100)`を編集してください(mm 単位)
+- ポテンショメータ等のアナログセンサを使用する場合、`SLOPE_ALPHA`と`SLOPE_BETA`の値を読み取り値に応じて変更してください
+- Zwift の難易度設定に応じて、`ZWIFT_DIFFICULTY`を変更してください。デフォルト設定の場合は`1`で ok です
 
 ## 使い方
 
@@ -49,6 +55,4 @@ URL は参考です。
 6. TacxNeo が起動している場合自動的に接続します(Tacx 系の他のトレーナーも接続できるかもしれません。それ以外はおそらく接続できません
 
 ※ ERG モードには対応していません。使いたい場合は直接トレーナーと接続するようにしてください  
-※ Zwift 以外に Tacx の Training アプリからも接続することもできます。Zwift の難易度設定によって、表示される斜度と
-
-が、アプリで設定した斜度の倍の値が設定されます。Zwift が実際の傾斜値の半分の値を送信しているようだったので倍にしてます
+※ Zwift 以外に Tacx の Training アプリからも接続することもできます。
