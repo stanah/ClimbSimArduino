@@ -487,7 +487,7 @@ std::vector<std::string> BLEDevice::clientAddress;
 void BLEDevice::whiteListAdd(BLEAddress address) {
   log_v(">> whiteListAdd: %s", address.toString().c_str());
   esp_err_t errRc =
-      esp_ble_gap_update_whitelist(true, *address.getNative());  // True to add an entry.
+      esp_ble_gap_update_whitelist(true, *address.getNative(), BLE_WL_ADDR_TYPE_PUBLIC);  // True to add an entry.
   if (errRc != ESP_OK) {
     log_e("esp_ble_gap_update_whitelist: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
   }
@@ -501,7 +501,7 @@ void BLEDevice::whiteListAdd(BLEAddress address) {
 void BLEDevice::whiteListRemove(BLEAddress address) {
   log_v(">> whiteListRemove: %s", address.toString().c_str());
   esp_err_t errRc =
-      esp_ble_gap_update_whitelist(false, *address.getNative());  // False to remove an entry.
+      esp_ble_gap_update_whitelist(false, *address.getNative(), BLE_WL_ADDR_TYPE_PUBLIC);  // False to remove an entry.
   if (errRc != ESP_OK) {
     log_e("esp_ble_gap_update_whitelist: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
   }
