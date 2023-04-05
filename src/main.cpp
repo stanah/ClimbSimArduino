@@ -9,7 +9,8 @@
 #include <FreeRTOS/queue.h>
 #include <Wire.h>
 
-// #define SENSOR_TYPE_POTENTIOMETER
+// VL53L0Xを使う場合はコメントアウトする
+#define SENSOR_TYPE_POTENTIOMETER
 
 #ifndef SENSOR_TYPE_POTENTIOMETER
 #include <Adafruit_VL53L0X.h>
@@ -30,10 +31,32 @@
 #define DOWN (-1)
 #define STOP (0)
 
+#define ZWIFT_DIFFICULTY (1)  // 難易度設定に合わせて調整する必要がある
+
 #ifdef SENSOR_TYPE_POTENTIOMETER
 #define ADC_PORT A6
-#define SLOPE_ALPHA (0.2)
-#define SLOPE_BETA (300)
+
+// 参考: SLOPE_ALPHA と SLOPE_BETA を計算する
+// #define MAX_AD_Value 3600
+// #define MIN_AD_Value 370
+// #define MAX_Slope 200
+// #define MIN_Slope -50
+// #define SLOPE_ALPHA ((MAX_Slope - MIN_Slope) / (MAX_AD_Value - MIN_AD_Value))
+// #define SLOPE_BETA (MIN_AD_Value * SLOPE_ALPHA - MIN_Slope)
+
+// MAX_AD_Value * a - b = MAX_Slope
+// MIN_AD_Value * a - b = MIN_Slope
+// a = (MAX_Slope - MIN_Slope) / (MAX_AD_Value - MIN_AD_Value)
+// a = (200 - (-50)) / (3600 - 370)
+// a = 0.0774..
+// b = MIN_AD_Value * SLOPE_ALPHA - MIN_Slope
+// b = 370 * 0.0774 - (-50)
+// b = 78.638..
+
+#define SLOPE_ALPHA (0.0774)
+#define SLOPE_BETA (78.638)
+
+
 #else
 #define SLOPE_ALPHA (1)
 #define SLOPE_BETA (100)  // Default distance to ToF sensor
@@ -68,8 +91,7 @@ void vControlTask(void* pvParameters) {
     xStatus = xQueueReceive(xControlQueue, &buf, portMAX_DELAY);
     if (xStatus == pdPASS) {
       if (buf[4] == 0x33) {
-        nextSlope = ((buf[10] * 256 + buf[9]) / 10 - 2000) *
-                    2;  // Zwift is passed half the value of the displayed gradient
+        nextSlope = ((buf[10] * 256 + buf[9]) / 10 - 2000);  // 難易度に合わせて調整する必要がある
         // Serial.print("[debug] receive slope:");
         // Serial.println(nextSlope);
       }
@@ -127,7 +149,6 @@ uint8_t toNextSlope() {
 #endif
   }
   nowSlope = (sum / cnt) * SLOPE_ALPHA - SLOPE_BETA;
-
   int diff = -(nowSlope - nextSlope);
   if (diff > APPROVAL_DELTA) {
     digitalWrite(MOTOR_CTRL_PORT_A, HIGH);
