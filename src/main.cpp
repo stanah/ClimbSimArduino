@@ -91,7 +91,7 @@ void vControlTask(void* pvParameters) {
     xStatus = xQueueReceive(xControlQueue, &buf, portMAX_DELAY);
     if (xStatus == pdPASS) {
       if (buf[4] == 0x33) {
-        nextSlope = ((buf[10] * 256 + buf[9]) / 10 - 2000);  // 難易度に合わせて調整する必要がある
+        nextSlope = ((buf[10] * 256 + buf[9]) / 10 - 2000) * ZWIFT_DIFFICULTY;  // 難易度に合わせて調整する必要がある
         // Serial.print("[debug] receive slope:");
         // Serial.println(nextSlope);
       }
